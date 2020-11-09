@@ -199,7 +199,11 @@ findBibFile <- function(package) {
 #' @param srcfile output of \code{\link{srcfile}}
 #' @export
 do_read_bib <- function(file, encoding = "unknown", srcfile){
-  .External( "do_read_bib", file=file, encoding=encoding, srcfile=srcfile, PACKAGE = "bibtex" )
+  out <- .External( "do_read_bib", file=file, encoding=encoding, srcfile=srcfile, PACKAGE = "bibtex" )
+
+  # Force encoding of parsed output to UTF-8 if necessary. See #20
+  if (encoding == "UTF-8") out <- lapply(out, `Encoding<-`, "UTF-8")
+  out
 }
 
 #' bibtex parser
@@ -268,6 +272,10 @@ read.bib <- function(file = findBibFile(package) ,
                              if( any( grepl( "syntax error, unexpected [$]end", w)))
                                invokeRestart("muffleWarning")
                            })
+
+    # Force encoding of parsed output to UTF-8 if necessary. See #20
+    if (encoding == "UTF-8") out <- lapply(out, `Encoding<-`, "UTF-8")
+
     # keys <- lapply(out, function(x) attr(x, 'key'))
     at  <- attributes(out)
     if((typeof(out) != "integer") || (getRversion() < "3.0.0"))
@@ -370,7 +378,7 @@ write.bib <- function(entry, file="Rpackages.bib", append = FALSE, verbose = TRU
     fh <- file(file, open = if(append) "a+" else "w+" )
     on.exit( if( isOpen(fh) ) close(fh) )
     if( verbose ) message("Writing ", length(bibs) , " Bibtex entries ... ", appendLF=FALSE)
-    writeLines(toBibtex(bibs), fh)
+    writeLines(toBibtex(bibs), fh, useBytes = TRUE)
     #writeLines(do.call("c", lapply(bibs, as.character)), fh)
     if(verbose) message("OK\nResults written to file '", file, "'")
 
